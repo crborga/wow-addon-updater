@@ -1,9 +1,9 @@
 import configparser
 import shutil
 import tempfile
-import threading
 import zipfile
 from io import BytesIO
+from multiprocessing.pool import ThreadPool
 from os.path import isfile, isdir, join
 
 import requests
@@ -55,13 +55,11 @@ class AddonManager:
         # filter any blank lines or lines commented with an octothorp (#)
         addon_entries = [entry for entry in addon_entries if entry and not entry.startswith('#')]
 
+        pool = ThreadPool(5)
         for addon_entry in addon_entries:
-            thread = threading.Thread(target=self.update_addon, args=(addon_entry,))
-            threads.append(thread)
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+            pool.apply_async(self.update_addon, (addon_entry,))
+        pool.close()
+        pool.join()
 
         self.set_installed_versions()
         self.display_results()
